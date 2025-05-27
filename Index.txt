@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Leaflet GeoJSON Example</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.Default.css" />
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
+  <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+    }
+    #map {
+      height: 100%;
+      width: 100%;
+    }
+  </style>
+</head>
+<body>
+
+<h3>Leaflet Map with GeoJSON</h3>
+<div id="map"></div>
+
+<script>
+  const map = L.map('map').setView([37.8, -96], 4);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap contributors'
+  }).addTo(map);
+
+  // Color scale based on Total Units
+  function getColor(units) {
+    return units > 500 ? '#800026' :
+           units > 200 ? '#BD0026' :
+           units > 100 ? '#E31A1C' :
+           units > 50  ? '#FC4E2A' :
+           units > 20  ? '#FD8D3C' :
+           units > 10  ? '#FEB24C' :
+           units > 0   ? '#FED976' :
+                        '#FFEDA0';
+  }
+
+  const markers = L.markerClusterGroup();
+
+  function addGeoJsonToMap(url) {
+    fetch(url)
+      .then(response => response.json())
+      .then(data => {
+        const geojsonLayer = L.geoJSON(data, {
+          pointToLayer: function (feature, latlng) {
+            const totalUnits = feature.properties["Total Units"] || 0;
+            return L.circleMarker(latlng, {
+              radius: 6,
+              fillColor: getColor(totalUnits),
+              color: "#333",
+              weight: 1,
+              opacity: 1,
+              fillOpacity: 0.8
+            });
+          },
+          onEachFeature: function (feature, layer) {
+            if (feature.properties) {
+              const p = feature.properties;
+              const popupContent = `
+                <strong>City:</strong> ${p["City"] || "N/A"}<br>
+                <strong>Total Units:</strong> ${p["Total Units"]}<br>
+                <strong>1 Unit:</strong> ${p["1 Unit"]}<br>
+                <strong>2 Units:</strong> ${p["2 Units"]}<br>
+                <strong>3 and 4 Units:</strong> ${p["3 and 4 Units"]}<br>
+                <strong>5 Units or More:</strong> ${p["5 Units or More"]}<br>
+                <strong>Structures with 5+ Units:</strong> ${p["Structures with 5+ Units"]}
+              `;
+              layer.bindPopup(popupContent);
+            }
+          }
+        });
+
+        markers.addLayer(geojsonLayer);
+        map.addLayer(markers);
+      });
+  }
+
+  // Add your GeoJSON files
+  addGeoJsonToMap('AprilGeo_updated.geojson');
+  // You can add others as needed:
+  // addGeoJsonToMap('AnotherFile.geojson');
+</script>
+
+</body>
+</html>
